@@ -42,6 +42,11 @@ class OpenApi extends Data
         return static::$schemas;
     }
 
+    public static function getSchema(string $name): ?string
+    {
+        return static::$schemas[$name] ?? (static::$temp_schemas[$name] ?? null);
+    }
+
     /** @return array<string,class-string<Data>> */
     public static function getTempSchemas(): array
     {
@@ -61,7 +66,7 @@ class OpenApi extends Data
                 try {
                     self::$temp_schemas = [];
 
-                    $paths[$uri][$method] = Operation::fromRoute($route);
+                    $paths[$uri][$method] = Operation::fromRoute($route, $method);
 
                     self::addTempSchemas();
                 } catch (Throwable $th) {

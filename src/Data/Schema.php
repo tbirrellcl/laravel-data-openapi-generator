@@ -47,6 +47,24 @@ class Schema extends Data
         $this->nullable = $this->nullable ? $this->nullable : null;
     }
 
+    /** @return DataCollection<int,Property> */
+    public function getObjectProperties(): DataCollection
+    {
+        if ($this->type == 'object') {
+            return $this->properties;
+        } else {
+            return new DataCollection(Property::class, []);
+        }
+    }
+
+    public function resolveRef(): ?self
+    {
+        if (!$this->ref) {
+            return null;
+        }
+        return self::fromDataClass(OpenApi::getSchema(substr($this->ref, strlen('#/components/schemas/'))));
+    }
+
     public static function fromReflectionProperty(ReflectionProperty $reflection): self
     {
         $property = app(DataPropertyFactory::class)->build(

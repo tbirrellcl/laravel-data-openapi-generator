@@ -39,6 +39,25 @@ class Parameter extends Data
         ), DataCollection::class);
     }
 
+    /**
+     * @return null|DataCollection<int,static>
+     */
+    public static function fromRequestBody(RequestBody $requestBody): ?DataCollection
+    {
+        /*
+         * GET requests cannot have request bodies
+         * but we can have request objects that read out parameters from the query parameters
+         * So here we convert a request body into parameters
+         */
+        return $requestBody->content->schema?->resolveRef()?->getObjectProperties()?->map(fn(Property $property) => new self(
+            name: $property->getName(),
+            description: $property->getName(),
+            required: $property->required,
+            schema: $property->type,
+            in: "query",
+        ));
+    }
+
     public static function fromParameter(string $name, ReflectionFunction|ReflectionMethod $method): self
     {
         /** @var null|ReflectionParameter */

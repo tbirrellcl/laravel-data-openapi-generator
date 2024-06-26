@@ -30,7 +30,7 @@ class Operation extends Data
         public ?DataCollection $security,
     ) {}
 
-    public static function fromRoute(Route $route): self
+    public static function fromRoute(Route $route, string $method): self
     {
         $uses = $route->action['uses'];
 
@@ -65,12 +65,21 @@ class Operation extends Data
             $responses[HttpResponse::HTTP_FORBIDDEN] = Response::forbidden($controller_function);
         }
 
+        $requestBody = RequestBody::fromRoute($controller_function);
+        $params = Parameter::fromRoute($route, $controller_function);
+        if ($method == 'get' && $requestBody) {
+            $bodyParams = Parameter::fromRequestBody($requestBody)->all();
+            $params = new DataCollection(Parameter::class, [...$params?->all() ?? [], ...$bodyParams]);
+            $requestBody = null;
+        }
+
         return self::from([
             'description' => $description,
-            'parameters'  => Parameter::fromRoute($route, $controller_function),
-            'requestBody' => RequestBody::fromRoute($controller_function),
+            'parameters'  => $params,
+            'requestBody' => $requestBody,
             'responses'   => $responses,
             'security'    => $security,
+            'method'      => $method
         ]);
     }
 
