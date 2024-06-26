@@ -28,8 +28,7 @@ class SecurityScheme extends Data
 
         /** @var string[] $middlewares */
         $middlewares = $route->middleware();
-
-        if (in_array('auth:sanctum', $middlewares)) {
+        if (array_intersect(config('openapi-generator.security_middlewares.' . self::BEARER_SECURITY_SCHEME), $middlewares)) {
             $security[] = new self(
                 scheme: self::BEARER_SECURITY_SCHEME,
                 permissions: $permissions,
