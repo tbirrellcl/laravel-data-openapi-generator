@@ -41,6 +41,7 @@ class Schema extends Data
         /** @var DataCollection<int,Property> */
         #[DataCollectionOf(Property::class)]
         protected ?DataCollection $properties = null,
+        public ?array $enum = null,
     ) {
         $this->type     = self::CASTS[$this->type] ?? $this->type;
         $this->nullable = $this->nullable ? $this->nullable : null;
@@ -181,12 +182,13 @@ class Schema extends Data
         $enum = (new ReflectionEnum($type));
 
         $type_name = 'string';
-
+        $values = null;
         if ($enum->isBacked() && $type = $enum->getBackingType()) {
             $type_name = (string) $type;
+            $values = collect($enum->getCases())->map(fn (\ReflectionEnumBackedCase $case) => $case->getBackingValue())->all();
         }
 
-        return new self(type: $type_name, nullable: $nullable);
+        return new self(type: $type_name, nullable: $nullable, enum: $values);
     }
 
     protected static function fromData(string $type_name, bool $nullable): self
