@@ -14,6 +14,7 @@ class Property extends Data
     public function __construct(
         protected string $name,
         public Schema $type,
+        public bool $required = true,
     ) {}
 
     public function getName(): string
@@ -50,6 +51,7 @@ class Property extends Data
         return new self(
             name: $reflection->getName(),
             type: Schema::fromReflectionProperty($reflection),
+            required: !$reflection->getType()?->allowsNull() ?? false,
         );
     }
 }

@@ -151,6 +151,16 @@ class Schema extends Data
             $array['properties'] = collect($this->properties->all())
                 ->mapWithKeys(fn (Property $property) => [$property->getName() => $property->type->transform($transformationContext)])
                 ->toArray();
+
+            $array['required'] = collect($this->properties->all())
+                ->filter(fn(Property $property) => $property->required)
+                ->map(fn (Property $property) => $property->getName())
+                ->values()
+                ->toArray();
+
+            if (count($array['required']) == 0) {
+                unset($array['required']);
+            }
         }
 
         return $array;
