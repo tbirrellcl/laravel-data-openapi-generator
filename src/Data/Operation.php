@@ -11,7 +11,8 @@ use ReflectionFunction;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\DataCollection;
-use Spatie\LaravelData\Support\Wrapping\WrapExecutionType;
+use Spatie\LaravelData\Support\Transformation\TransformationContext;
+use Spatie\LaravelData\Support\Transformation\TransformationContextFactory;
 
 class Operation extends Data
 {
@@ -27,8 +28,7 @@ class Operation extends Data
         /** @var null|DataCollection<int,SecurityScheme> */
         #[DataCollectionOf(SecurityScheme::class)]
         public ?DataCollection $security,
-    ) {
-    }
+    ) {}
 
     public static function fromRoute(Route $route): self
     {
@@ -65,25 +65,23 @@ class Operation extends Data
             $responses[HttpResponse::HTTP_FORBIDDEN] = Response::forbidden($controller_function);
         }
 
-        return new self(
-            description: $description,
-            parameters: Parameter::fromRoute($route, $controller_function),
-            requestBody: RequestBody::fromRoute($controller_function),
-            responses: Response::collection($responses),
-            security: $security,
-        );
+        return self::from([
+            'description' => $description,
+            'parameters'  => Parameter::fromRoute($route, $controller_function),
+            'requestBody' => RequestBody::fromRoute($controller_function),
+            'responses'   => $responses,
+            'security'    => $security,
+        ]);
     }
 
     /**
      * @return array<int|string,mixed>
      */
     public function transform(
-        bool $transformValues = true,
-        WrapExecutionType $wrapExecutionType = WrapExecutionType::Disabled,
-        bool $mapPropertyNames = true,
+        null|TransformationContext|TransformationContextFactory $transformationContext = null,
     ): array {
         return array_filter(
-            parent::transform($transformValues, $wrapExecutionType, $mapPropertyNames),
+            parent::transform($transformationContext),
             fn (mixed $value) => null !== $value,
         );
     }

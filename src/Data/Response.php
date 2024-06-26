@@ -13,8 +13,7 @@ class Response extends Data
     public function __construct(
         public string $description,
         public Content $content,
-    ) {
-    }
+    ) {}
 
     public static function fromRoute(ReflectionMethod|ReflectionFunction $method): self
     {

@@ -19,13 +19,12 @@ class Parameter extends Data
         public string $description,
         public bool $required,
         public Schema $schema,
-    ) {
-    }
+    ) {}
 
     /**
      * @return null|DataCollection<int,static>
      */
-    public static function fromRoute(Route $route, ReflectionMethod|ReflectionFunction $method): ?DataCollection
+    public static function fromRoute(Route $route, ReflectionFunction|ReflectionMethod $method): ?DataCollection
     {
         /** @var string[] */
         $parameters = $route->parameterNames();
@@ -34,13 +33,13 @@ class Parameter extends Data
             return null;
         }
 
-        return Parameter::collection(array_map(
+        return Parameter::collect(array_map(
             fn (string $parameter) => Parameter::fromParameter($parameter, $method),
             $parameters,
-        ));
+        ), DataCollection::class);
     }
 
-    public static function fromParameter(string $name, ReflectionMethod|ReflectionFunction $method): self
+    public static function fromParameter(string $name, ReflectionFunction|ReflectionMethod $method): self
     {
         /** @var null|ReflectionParameter */
         $parameter = Arr::first(

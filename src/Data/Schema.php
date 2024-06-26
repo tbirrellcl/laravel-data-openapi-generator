@@ -19,8 +19,9 @@ use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Data as LaravelData;
 use Spatie\LaravelData\DataCollection;
-use Spatie\LaravelData\Support\DataProperty;
-use Spatie\LaravelData\Support\Wrapping\WrapExecutionType;
+use Spatie\LaravelData\Support\Factories\DataPropertyFactory;
+use Spatie\LaravelData\Support\Transformation\TransformationContext;
+use Spatie\LaravelData\Support\Transformation\TransformationContextFactory;
 use UnitEnum;
 
 class Schema extends Data
@@ -47,28 +48,24 @@ class Schema extends Data
 
     public static function fromReflectionProperty(ReflectionProperty $reflection): self
     {
-        $property = DataProperty::create($reflection);
+        $property = app(DataPropertyFactory::class)->build(
+            $reflection,
+            $reflection->getDeclaringClass(),
+        );
 
         $type = $property->type;
 
         /** @var null|string */
         $data_class = $type->dataClass;
 
-        if ($type->isDataObject && $data_class) {
+        if ($type->kind->isDataObject() && $data_class) {
             return self::fromData($data_class, $type->isNullable || $type->isOptional);
         }
-        if ($type->isDataCollectable && $data_class) {
+        if ($type->kind->isDataCollectable() && $data_class) {
             return self::fromDataCollection($data_class, $type->isNullable || $type->isOptional);
         }
 
-        /** @var null|string */
-        $other_type = array_keys($type->acceptedTypes)[0] ?? null;
-
-        if (! $other_type) {
-            throw new RuntimeException("Parameter {$property->name} has no type defined");
-        }
-
-        return self::fromDataReflection(type_name: $other_type, reflection: $reflection, nullable: $type->isNullable);
+        return self::fromDataReflection(type_name: $type->type->name, reflection: $reflection, nullable: $type->isNullable);
     }
 
     public static function fromDataReflection(
@@ -133,12 +130,10 @@ class Schema extends Data
      * @return array<int|string,mixed>
      */
     public function transform(
-        bool $transformValues = true,
-        WrapExecutionType $wrapExecutionType = WrapExecutionType::Disabled,
-        bool $mapPropertyNames = true,
+        null|TransformationContext|TransformationContextFactory $transformationContext = null,
     ): array {
         $array = array_filter(
-            parent::transform($transformValues, $wrapExecutionType),
+            parent::transform($transformationContext),
             fn (mixed $value) => null !== $value,
         );
 
@@ -154,7 +149,7 @@ class Schema extends Data
 
         if (null !== $this->properties) {
             $array['properties'] = collect($this->properties->all())
-                ->mapWithKeys(fn (Property $property) => [$property->getName() => $property->type->transform($transformValues, $wrapExecutionType, $mapPropertyNames)])
+                ->mapWithKeys(fn (Property $property) => [$property->getName() => $property->type->transform($transformationContext)])
                 ->toArray();
         }
 

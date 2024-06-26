@@ -14,8 +14,7 @@ class RequestBody extends Data
 {
     public function __construct(
         public Content $content,
-    ) {
-    }
+    ) {}
 
     public static function fromRoute(ReflectionMethod|ReflectionFunction $method): ?self
     {
