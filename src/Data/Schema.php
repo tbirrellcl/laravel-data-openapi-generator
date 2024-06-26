@@ -245,10 +245,6 @@ class Schema extends Data
 
         $class = $tag_type->getValueType()->__toString();
 
-        if (! class_exists($class)) {
-            throw new RuntimeException('Cannot resolve "' . $class . '". Make sure to use the full path in the phpdoc including the first "\".');
-        }
-
         return new self(
             type: 'array',
             items: self::fromDataReflection($class),
