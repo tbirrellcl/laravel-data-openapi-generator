@@ -63,7 +63,7 @@ class Schema extends Data
             return self::fromData($data_class, $type->isNullable || $type->isOptional);
         }
         if ($type->kind->isDataCollectable() && $data_class) {
-            return self::fromDataCollection($data_class, $type->isNullable || $type->isOptional);
+             return self::fromDataCollection($data_class, $type->isNullable || $type->isOptional);
         }
 
         return self::fromDataReflection(type_name: $type->type->name, reflection: $reflection, nullable: $type->isNullable);
@@ -83,6 +83,10 @@ class Schema extends Data
 
         if (is_a($type_name, DateTimeInterface::class, true)) {
             return self::fromDateTime($nullable);
+        }
+
+        if (! $is_class && str_ends_with($type_name, '[]')) {
+            return self::fromArray($type_name, $nullable);
         }
 
         if (! $is_class && 'array' !== $type_name) {
@@ -257,6 +261,16 @@ class Schema extends Data
 
         $class = $tag_type->getValueType()->__toString();
 
+        return new self(
+            type: 'array',
+            items: self::fromDataReflection($class),
+            nullable: $nullable,
+        );
+    }
+
+    protected static function fromArray(string $type, bool $nullable): self
+    {
+        $class = substr($type, 0, -2);
         return new self(
             type: 'array',
             items: self::fromDataReflection($class),
