@@ -39,9 +39,7 @@ class Operation extends Data
             throw new Exception('Unknown route uses');
         }
 
-        $responses = [
-            HttpResponse::HTTP_OK => Response::fromRoute($controller_function),
-        ];
+        $responses = Response::fromRoute($controller_function)->all();
 
         $security = SecurityScheme::fromRoute($route);
         if ($security->count() > 0) {

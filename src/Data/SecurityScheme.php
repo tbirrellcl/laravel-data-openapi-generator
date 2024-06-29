@@ -21,7 +21,7 @@ class SecurityScheme extends Data
     /**
      * @return Collection<int,static>
      */
-    public static function fromRoute(Route $route): ?Collection
+    public static function fromRoute(Route $route): Collection
     {
         $security    = [];
         $permissions = static::getPermissions($route);
