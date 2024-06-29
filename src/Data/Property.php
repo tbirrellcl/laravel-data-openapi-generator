@@ -48,7 +48,7 @@ class Property extends Data
         return new self(
             name: $reflection->getName(),
             type: Schema::fromReflectionProperty($reflection),
-            required: !$reflection->getType()?->allowsNull() ?? false,
+            required: ! $reflection->getType()?->allowsNull() ?? false,
         );
     }
 }

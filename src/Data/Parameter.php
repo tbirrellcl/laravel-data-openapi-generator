@@ -28,6 +28,7 @@ class Parameter extends Data
     {
         /** @var string[] */
         $parameters = $route->parameterNames();
+
         return Parameter::collect(array_map(
             fn (string $parameter) => Parameter::fromParameter($parameter, $method),
             $parameters,
@@ -44,12 +45,12 @@ class Parameter extends Data
          * but we can have request objects that read out parameters from the query parameters
          * So here we convert a request body into parameters
          */
-        return $requestBody->content->schema?->resolveRef()?->getObjectProperties()?->map(fn(Property $property) => new self(
+        return $requestBody->content->schema?->resolveRef()?->getObjectProperties()?->map(fn (Property $property) => new self(
             name: $property->getName(),
             description: $property->getName(),
             required: $property->required,
             schema: $property->type,
-            in: "query",
+            in: 'query',
         ));
     }
 

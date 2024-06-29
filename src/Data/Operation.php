@@ -59,10 +59,10 @@ class Operation extends Data
         }
 
         $requestBody = RequestBody::fromRoute($controller_function);
-        $params = Parameter::fromRoute($route, $controller_function);
-        if ($method == 'get' && $requestBody) {
-            $bodyParams = Parameter::fromRequestBody($requestBody)->all();
-            $params = collect([...$params->all(), ...$bodyParams]);
+        $params      = Parameter::fromRoute($route, $controller_function);
+        if ('get' == $method && $requestBody) {
+            $bodyParams  = Parameter::fromRequestBody($requestBody)->all();
+            $params      = collect([...$params->all(), ...$bodyParams]);
             $requestBody = null;
         }
 
@@ -72,7 +72,7 @@ class Operation extends Data
             'requestBody' => $requestBody,
             'responses'   => $responses,
             'security'    => $security->count() > 0 ? $security : null,
-            'method'      => $method
+            'method'      => $method,
         ]);
     }
 

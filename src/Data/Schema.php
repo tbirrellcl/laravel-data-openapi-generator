@@ -10,6 +10,7 @@ use phpDocumentor\Reflection\DocBlock\Tags\Var_;
 use phpDocumentor\Reflection\DocBlockFactory;
 use phpDocumentor\Reflection\Types\AbstractList;
 use ReflectionEnum;
+use ReflectionEnumBackedCase;
 use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionNamedType;
@@ -49,18 +50,19 @@ class Schema extends Data
     /** @return Collection<int,Property> */
     public function getObjectProperties(): Collection
     {
-        if ($this->type == 'object') {
+        if ('object' == $this->type) {
             return $this->properties;
-        } else {
-            return collect();
         }
+
+        return collect();
     }
 
     public function resolveRef(): ?self
     {
-        if (!$this->ref) {
+        if (! $this->ref) {
             return null;
         }
+
         return self::fromDataClass(OpenApi::getSchema(substr($this->ref, strlen('#/components/schemas/'))));
     }
 
@@ -80,7 +82,7 @@ class Schema extends Data
             return self::fromData($data_class, $type->isNullable || $type->isOptional);
         }
         if ($type->kind->isDataCollectable() && $data_class) {
-             return self::fromDataCollection($data_class, $type->isNullable || $type->isOptional);
+            return self::fromDataCollection($data_class, $type->isNullable || $type->isOptional);
         }
 
         return self::fromDataReflection(type_name: $type->type->name, reflection: $reflection, nullable: $type->isNullable);
@@ -175,12 +177,12 @@ class Schema extends Data
                 ->toArray();
 
             $array['required'] = collect($this->properties->all())
-                ->filter(fn(Property $property) => $property->required)
+                ->filter(fn (Property $property) => $property->required)
                 ->map(fn (Property $property) => $property->getName())
                 ->values()
                 ->toArray();
 
-            if (count($array['required']) == 0) {
+            if (0 == count($array['required'])) {
                 unset($array['required']);
             }
         }
@@ -203,10 +205,10 @@ class Schema extends Data
         $enum = (new ReflectionEnum($type));
 
         $type_name = 'string';
-        $values = null;
+        $values    = null;
         if ($enum->isBacked() && $type = $enum->getBackingType()) {
             $type_name = (string) $type;
-            $values = collect($enum->getCases())->map(fn (\ReflectionEnumBackedCase $case) => $case->getBackingValue())->all();
+            $values    = collect($enum->getCases())->map(fn (ReflectionEnumBackedCase $case) => $case->getBackingValue())->all();
         }
 
         return new self(type: $type_name, nullable: $nullable, enum: $values);
@@ -288,6 +290,7 @@ class Schema extends Data
     protected static function fromArray(string $type, bool $nullable): self
     {
         $class = substr($type, 0, -2);
+
         return new self(
             type: 'array',
             items: self::fromDataReflection($class),
