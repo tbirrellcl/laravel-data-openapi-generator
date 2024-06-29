@@ -3,8 +3,8 @@
 namespace Xolvio\OpenApiGenerator\Data;
 
 use Illuminate\Routing\Route;
+use Illuminate\Support\Collection;
 use Spatie\LaravelData\Data;
-use Spatie\LaravelData\DataCollection;
 use Spatie\LaravelData\Support\Transformation\TransformationContext;
 use Spatie\LaravelData\Support\Transformation\TransformationContextFactory;
 
@@ -19,9 +19,9 @@ class SecurityScheme extends Data
     ) {}
 
     /**
-     * @return null|DataCollection<int,static>
+     * @return Collection<int,static>
      */
-    public static function fromRoute(Route $route): ?DataCollection
+    public static function fromRoute(Route $route): ?Collection
     {
         $security    = [];
         $permissions = static::getPermissions($route);
@@ -35,11 +35,7 @@ class SecurityScheme extends Data
             );
         }
 
-        if (0 === count($security)) {
-            return null;
-        }
-
-        return self::collect($security, DataCollection::class);
+        return self::collect($security, Collection::class);
     }
 
     /**

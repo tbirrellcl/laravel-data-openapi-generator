@@ -4,6 +4,7 @@ namespace Xolvio\OpenApiGenerator\Data;
 
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use phpDocumentor\Reflection\DocBlock\Tags\Return_;
 use phpDocumentor\Reflection\DocBlock\Tags\Var_;
 use phpDocumentor\Reflection\DocBlockFactory;
@@ -15,7 +16,6 @@ use ReflectionNamedType;
 use ReflectionParameter;
 use ReflectionProperty;
 use RuntimeException;
-use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Data as LaravelData;
 use Spatie\LaravelData\DataCollection;
@@ -38,22 +38,21 @@ class Schema extends Data
         public ?string $format = null,
         public ?Schema $items = null,
         public ?string $ref = null,
-        /** @var DataCollection<int,Property> */
-        #[DataCollectionOf(Property::class)]
-        protected ?DataCollection $properties = null,
+        /** @var Collection<int,Property> */
+        protected ?Collection $properties = null,
         public ?array $enum = null,
     ) {
         $this->type     = self::CASTS[$this->type] ?? $this->type;
         $this->nullable = $this->nullable ? $this->nullable : null;
     }
 
-    /** @return DataCollection<int,Property> */
-    public function getObjectProperties(): DataCollection
+    /** @return Collection<int,Property> */
+    public function getObjectProperties(): Collection
     {
         if ($this->type == 'object') {
             return $this->properties;
         } else {
-            return new DataCollection(Property::class, []);
+            return collect();
         }
     }
 
@@ -111,7 +110,7 @@ class Schema extends Data
             return self::fromBuiltin($type_name, $nullable);
         }
 
-        if (null !== $reflection && (is_a($type_name, DataCollection::class, true) || 'array' === $type_name)) {
+        if (null !== $reflection && (is_a($type_name, DataCollection::class, true) || is_a($type_name, Collection::class, true) || 'array' === $type_name)) {
             return self::fromListDocblock($reflection, $nullable);
         }
 

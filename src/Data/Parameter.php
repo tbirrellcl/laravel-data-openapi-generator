@@ -5,11 +5,11 @@ namespace Xolvio\OpenApiGenerator\Data;
 use Exception;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionParameter;
 use Spatie\LaravelData\Data;
-use Spatie\LaravelData\DataCollection;
 
 class Parameter extends Data
 {
@@ -22,27 +22,22 @@ class Parameter extends Data
     ) {}
 
     /**
-     * @return null|DataCollection<int,static>
+     * @return Collection<int,static>
      */
-    public static function fromRoute(Route $route, ReflectionFunction|ReflectionMethod $method): ?DataCollection
+    public static function fromRoute(Route $route, ReflectionFunction|ReflectionMethod $method): Collection
     {
         /** @var string[] */
         $parameters = $route->parameterNames();
-
-        if (0 === count($parameters)) {
-            return null;
-        }
-
         return Parameter::collect(array_map(
             fn (string $parameter) => Parameter::fromParameter($parameter, $method),
             $parameters,
-        ), DataCollection::class);
+        ), Collection::class);
     }
 
     /**
-     * @return null|DataCollection<int,static>
+     * @return ?Collection<int,static>
      */
-    public static function fromRequestBody(RequestBody $requestBody): ?DataCollection
+    public static function fromRequestBody(RequestBody $requestBody): ?Collection
     {
         /*
          * GET requests cannot have request bodies

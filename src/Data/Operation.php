@@ -6,11 +6,10 @@ use Closure;
 use Exception;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\Route;
+use Illuminate\Support\Collection;
 use ReflectionClass;
 use ReflectionFunction;
-use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Data;
-use Spatie\LaravelData\DataCollection;
 use Spatie\LaravelData\Support\Transformation\TransformationContext;
 use Spatie\LaravelData\Support\Transformation\TransformationContextFactory;
 
@@ -18,16 +17,13 @@ class Operation extends Data
 {
     public function __construct(
         public ?string $description,
-        /** @var null|DataCollection<int,Parameter> */
-        #[DataCollectionOf(Parameter::class)]
-        public ?DataCollection $parameters,
         public ?RequestBody $requestBody,
-        /** @var DataCollection<string,Response> */
-        #[DataCollectionOf(Response::class)]
-        public DataCollection $responses,
-        /** @var null|DataCollection<int,SecurityScheme> */
-        #[DataCollectionOf(SecurityScheme::class)]
-        public ?DataCollection $security,
+        /** @var ?Collection<int,Parameter> */
+        public ?Collection $parameters,
+        /** @var Collection<string,Response> */
+        public Collection $responses,
+        /** @var ?Collection<int,SecurityScheme> */
+        public ?Collection $security,
     ) {}
 
     public static function fromRoute(Route $route, string $method): self
@@ -48,15 +44,12 @@ class Operation extends Data
         ];
 
         $security = SecurityScheme::fromRoute($route);
-
-        if ($security) {
+        if ($security->count() > 0) {
             $responses[HttpResponse::HTTP_UNAUTHORIZED] = Response::unauthorized($controller_function);
         }
 
-        $permissions = SecurityScheme::getPermissions($route);
-
         $description = null;
-
+        $permissions = SecurityScheme::getPermissions($route);
         if (count($permissions) > 0) {
             $permissions_string = implode(', ', $permissions);
 
@@ -69,16 +62,16 @@ class Operation extends Data
         $params = Parameter::fromRoute($route, $controller_function);
         if ($method == 'get' && $requestBody) {
             $bodyParams = Parameter::fromRequestBody($requestBody)->all();
-            $params = new DataCollection(Parameter::class, [...$params?->all() ?? [], ...$bodyParams]);
+            $params = collect([...$params->all(), ...$bodyParams]);
             $requestBody = null;
         }
 
         return self::from([
             'description' => $description,
-            'parameters'  => $params,
+            'parameters'  => $params->count() > 0 ? $params : null,
             'requestBody' => $requestBody,
             'responses'   => $responses,
-            'security'    => $security,
+            'security'    => $security->count() > 0 ? $security : null,
             'method'      => $method
         ]);
     }
