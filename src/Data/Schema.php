@@ -9,6 +9,7 @@ use phpDocumentor\Reflection\DocBlock\Tags\Return_;
 use phpDocumentor\Reflection\DocBlock\Tags\Var_;
 use phpDocumentor\Reflection\DocBlockFactory;
 use phpDocumentor\Reflection\Types\AbstractList;
+use ReflectionClass;
 use ReflectionEnum;
 use ReflectionEnumBackedCase;
 use ReflectionFunction;
@@ -24,6 +25,8 @@ use Spatie\LaravelData\Support\Factories\DataPropertyFactory;
 use Spatie\LaravelData\Support\Transformation\TransformationContext;
 use Spatie\LaravelData\Support\Transformation\TransformationContextFactory;
 use UnitEnum;
+use Xolvio\OpenApiGenerator\Attributes\CustomContentType;
+use Xolvio\OpenApiGenerator\Attributes\HttpResponseStatus;
 
 class Schema extends Data
 {
@@ -110,6 +113,21 @@ class Schema extends Data
 
         if (! $is_class && 'array' !== $type_name) {
             return self::fromBuiltin($type_name, $nullable);
+        }
+
+        if ($is_class) {
+            $type_class = new ReflectionClass($type_name);
+            $attributes = $type_class->getAttributes(CustomContentType::class);
+            if (count($attributes) > 0) {
+                /** @var CustomContentType $instance */
+                $instance = $attributes[0]->newInstance();
+                if ($instance->isBinary) {
+                    return new self(
+                        type: 'string',
+                        format: 'binary'
+                    );
+                }
+            }
         }
 
         if (null !== $reflection && (is_a($type_name, DataCollection::class, true) || is_a($type_name, Collection::class, true) || 'array' === $type_name)) {
