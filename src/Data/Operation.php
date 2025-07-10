@@ -18,6 +18,7 @@ use Xolvio\OpenApiGenerator\Attributes\Tags;
 class Operation extends Data
 {
     public function __construct(
+        public ?string $operationId,
         public ?string $description,
         public ?RequestBody $requestBody,
         /** @var ?Collection<int,Parameter> */
@@ -33,6 +34,14 @@ class Operation extends Data
     public static function fromRoute(Route $route, string $method): self
     {
         $uses = $route->action['uses'];
+        $operationId = $route->uri;
+
+        if (isset($route->action['as'])) {
+            $operationId = $route->action['as'];
+        } else if (isset($route->action['uses'])) {
+            $usesParts = explode('@', $route->action['uses']);
+            $operationId = $route->action['prefix'] . '/' . $usesParts[1];
+        }
 
         if (is_string($uses)) {
             $controller_class = new ReflectionClass($route->getController());
@@ -72,6 +81,7 @@ class Operation extends Data
         }
 
         return self::from([
+            'operationId' => $operationId,
             'description' => $description,
             'parameters'  => $params->count() > 0 ? $params : null,
             'requestBody' => $requestBody,
