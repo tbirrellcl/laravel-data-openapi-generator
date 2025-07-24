@@ -9,6 +9,7 @@ use phpDocumentor\Reflection\DocBlock\Tags\Return_;
 use phpDocumentor\Reflection\DocBlock\Tags\Var_;
 use phpDocumentor\Reflection\DocBlockFactory;
 use phpDocumentor\Reflection\Types\AbstractList;
+use phpDocumentor\Reflection\Types\Compound;
 use ReflectionClass;
 use ReflectionEnum;
 use ReflectionEnumBackedCase;
@@ -100,6 +101,7 @@ class Schema extends Data
             $nullable  = $type_name->allowsNull();
             $type_name = $type_name->getName();
         }
+
         $is_class = class_exists($type_name);
 
         if (is_a($type_name, DateTimeInterface::class, true)) {
@@ -110,17 +112,11 @@ class Schema extends Data
             return self::fromArray($type_name, $nullable);
         }
 
+        if (! $is_class && 'mixed' === $type_name) {
+            // dd($reflection->getDocComment());
+            return self::fromListDocblock($reflection, $nullable);
+        }
         if (! $is_class && 'array' !== $type_name) {
-            if ($reflection instanceof ReflectionMethod) {
-                $imports = MethodContextAnalyzer::getImportedClasses($reflection);
-
-                foreach ($imports as $import) {
-                    if (str_ends_with($import, $type_name)) {
-                        return self::fromDataReflection($import, $reflection, $nullable);
-                    }
-                }
-            }
-
             return self::fromBuiltin($type_name, $nullable);
         }
 
@@ -147,6 +143,8 @@ class Schema extends Data
             return self::fromEnum($type_name, $nullable);
         }
 
+
+
         return self::fromData($type_name, $nullable);
     }
 
@@ -165,7 +163,6 @@ class Schema extends Data
             $instance  = (new $type_name());
             $type_name = $instance->getKeyType();
         }
-
         return new self(type: $type_name, nullable: $type->allowsNull());
     }
 
@@ -185,8 +182,20 @@ class Schema extends Data
     ): array {
         $array = array_filter(
             parent::transform($transformationContext),
-            fn(mixed $value) => null !== $value,
+            fn (mixed $value) => null !== $value,
         );
+
+        if ($array['type'] ?? false) {
+            if ($array['type'] === 'mixed') {
+                $array['oneOf'] = array_map(function ($item) {
+                    return [
+                        '$ref' => $item
+                    ];
+                }, $array['enum']);
+                unset($array['enum']);
+                unset($array['type']);
+            }
+        }
 
         if ($array['ref'] ?? false) {
             $array['$ref'] = $array['ref'];
@@ -200,12 +209,12 @@ class Schema extends Data
 
         if (null !== $this->properties) {
             $array['properties'] = collect($this->properties->all())
-                ->mapWithKeys(fn(Property $property) => [$property->getName() => $property->type->transform($transformationContext)])
+                ->mapWithKeys(fn (Property $property) => [$property->getName() => $property->type->transform($transformationContext)])
                 ->toArray();
 
             $array['required'] = collect($this->properties->all())
-                ->filter(fn(Property $property) => $property->required)
-                ->map(fn(Property $property) => $property->getName())
+                ->filter(fn (Property $property) => $property->required)
+                ->map(fn (Property $property) => $property->getName())
                 ->values()
                 ->toArray();
 
@@ -219,6 +228,7 @@ class Schema extends Data
 
     protected static function fromBuiltin(string $type_name, bool $nullable): self
     {
+        // if ($type_name =='mixed') dd(debug_backtrace());
         return new self(type: $type_name, nullable: $nullable);
     }
 
@@ -235,7 +245,7 @@ class Schema extends Data
         $values    = null;
         if ($enum->isBacked() && $type = $enum->getBackingType()) {
             $type_name = (string) $type;
-            $values    = collect($enum->getCases())->map(fn(ReflectionEnumBackedCase $case) => $case->getBackingValue())->all();
+            $values    = collect($enum->getCases())->map(fn (ReflectionEnumBackedCase $case) => $case->getBackingValue())->all();
         }
 
         return new self(type: $type_name, nullable: $nullable, enum: $values);
@@ -301,16 +311,33 @@ class Schema extends Data
 
         $tag_type = $tag->getType();
 
+        if ($tag_type instanceof Compound) {
+            $items = [];
+            foreach ($tag_type as $type_name) {
+                if ((string)$type_name !== 'null') {
+                    $scheme_name = last(explode('\\', $type_name));
+
+                    $items[] = '#/components/schemas/' . $scheme_name;
+                }
+            }
+
+            return new self(
+                type: 'mixed',
+                enum: $items,
+                nullable: $nullable,
+            );
+        }
+
+
         if (! $tag_type instanceof AbstractList) {
             throw new RuntimeException('Return tag of method ' . $reflection->getName() . ' is not a list');
         }
 
         $class = $tag_type->getValueType()->__toString();
 
-
         return new self(
             type: 'array',
-            items: self::fromDataReflection($class, $reflection),
+            items: self::fromDataReflection($class),
             nullable: $nullable,
         );
     }
@@ -324,177 +351,5 @@ class Schema extends Data
             items: self::fromDataReflection($class),
             nullable: $nullable,
         );
-    }
-}
-
-
-
-class MethodContextAnalyzer
-{
-    public static function getImportedClasses(ReflectionMethod $method)
-    {
-        $declaringClass = $method->getDeclaringClass();
-        $filename = $declaringClass->getFileName();
-
-        if (!$filename) {
-            return []; // Built-in classes don't have files
-        }
-
-        return self::parseUseStatements($filename);
-    }
-
-    private static function parseUseStatements($filename)
-    {
-        $content = file_get_contents($filename);
-        $tokens = token_get_all($content);
-
-        $imports = [];
-        $i = 0;
-        $count = count($tokens);
-
-        while ($i < $count) {
-            if (is_array($tokens[$i]) && $tokens[$i][0] === T_USE) {
-                $import = self::parseUseStatement($tokens, $i);
-                if ($import) {
-                    $imports = array_merge($imports, $import);
-                }
-            }
-            $i++;
-        }
-
-        return $imports;
-    }
-
-    private static function parseUseStatement($tokens, &$index)
-    {
-        $imports = [];
-        $baseNamespace = '';
-        $inGroup = false;
-        $currentImport = '';
-        $alias = '';
-        $expectingAlias = false;
-        $groupItems = [];
-
-        $index++; // Skip T_USE token
-
-        while ($index < count($tokens)) {
-            $token = $tokens[$index];
-
-            if (is_array($token)) {
-                switch ($token[0]) {
-                    case T_STRING:
-                    case T_NS_SEPARATOR:
-                    case T_NAME_QUALIFIED:
-                    case T_NAME_FULLY_QUALIFIED:
-                    case T_NAME_RELATIVE:
-                        if ($expectingAlias) {
-                            $alias = $token[1];
-                            $expectingAlias = false;
-                        } else {
-                            $currentImport .= $token[1];
-                        }
-                        break;
-
-                    case T_AS:
-                        $expectingAlias = true;
-                        break;
-
-                    case T_WHITESPACE:
-                    case T_COMMENT:
-                    case T_DOC_COMMENT:
-                        // Skip whitespace and comments
-                        break;
-
-                    case T_FUNCTION:
-                    case T_CONST:
-                        // Skip function/const use statements for now
-                        break;
-
-                    default:
-                        // End of use statement for unhandled tokens
-                        if ($currentImport) {
-                            if ($inGroup) {
-                                $groupItems[] = ['import' => $currentImport, 'alias' => $alias];
-                            } else {
-                                $fullName = $currentImport;
-                                $shortName = $alias ?: self::getShortName($fullName);
-                                $imports[$shortName] = $fullName;
-                            }
-                        }
-
-                        // Process group items if we were in a group
-                        if ($inGroup && !empty($groupItems)) {
-                            foreach ($groupItems as $item) {
-                                $fullName = $baseNamespace . '\\' . $item['import'];
-                                $shortName = $item['alias'] ?: self::getShortName($fullName);
-                                $imports[$shortName] = $fullName;
-                            }
-                        }
-
-                        return $imports;
-                }
-            } else {
-                // Handle punctuation
-                if ($token === '{') {
-                    $inGroup = true;
-                    $baseNamespace = $currentImport;
-                    $currentImport = '';
-                    $alias = '';
-                    $groupItems = [];
-                } elseif ($token === '}') {
-                    // Add current item to group
-                    if ($currentImport) {
-                        $groupItems[] = ['import' => $currentImport, 'alias' => $alias];
-                    }
-
-                    // Process all group items
-                    foreach ($groupItems as $item) {
-                        $fullName = $baseNamespace . '\\' . $item['import'];
-                        $shortName = $item['alias'] ?: self::getShortName($fullName);
-                        $imports[$shortName] = $fullName;
-                    }
-
-                    $inGroup = false;
-                    $currentImport = '';
-                    $alias = '';
-
-                    // Continue parsing for the semicolon
-                } elseif ($token === ',') {
-                    if ($currentImport) {
-                        if ($inGroup) {
-                            $groupItems[] = [
-                                'import' => $currentImport,
-                                'alias' => $alias
-                            ];
-                        } else {
-                            $fullName = $currentImport;
-                            $shortName = $alias ?: self::getShortName($fullName);
-                            $imports[$shortName] = $fullName;
-                        }
-                    }
-                    $currentImport = '';
-                    $alias = '';
-                    $expectingAlias = false;
-                } elseif ($token === ';') {
-                    // End of use statement
-                    if ($currentImport && !$inGroup) {
-                        $fullName = $currentImport;
-                        $shortName = $alias ?: self::getShortName($fullName);
-                        $imports[$shortName] = $fullName;
-                    }
-                    return $imports;
-                }
-            }
-
-            $index++;
-        }
-
-        return $imports;
-    }
-
-    private static function getShortName($fullName)
-    {
-        $parts = explode('\\', $fullName);
-        return end($parts);
     }
 }
