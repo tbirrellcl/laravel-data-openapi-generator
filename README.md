@@ -71,7 +71,7 @@ const url = `${import.meta.env.VITE_APP_URL}/api/openapi`;
 
 ## Config
 
-`php artisan vendor:publish --tag=openapi-generator-config`
+`php artisan vendor:publish --tag=openapi-generator`
 
 ## Generate
 
