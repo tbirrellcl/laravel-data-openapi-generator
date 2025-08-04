@@ -37,9 +37,9 @@ class Property extends Data
             'array' => 'array',
             'json' => 'array',
             'collection' => 'array',
-            'date' => 'CarbonImmutable',
-            'datetime' => 'CarbonImmutable',
-            'timestamp' => 'CarbonImmutable',
+            'date' => 'DateTime',
+            'datetime' => 'DateTime',
+            'timestamp' => 'DateTime',
         ];
 
         // Handle custom casts (like datetime:Y-m-d)
@@ -68,10 +68,10 @@ class Property extends Data
         'float' => 'float',
         'boolean' => 'bool',
         'tinyint(1)' => 'bool',
-        'date' => 'CarbonImmutable',
-        'datetime' => 'CarbonImmutable',
-        'timestamp' => 'CarbonImmutable',
-        'time' => 'CarbonImmutable',
+        'date' => 'DateTime',
+        'datetime' => 'DateTime',
+        'timestamp' => 'DateTime',
+        'time' => 'DateTime',
         'json' => 'array',
         'jsonb' => 'array',
     ];
@@ -153,7 +153,7 @@ class Property extends Data
 
             $properties[] = new self(
                 name: $column,
-                type: Schema::fromBuiltin($type, $nullable),
+                type: Schema::fromDataReflection($type, null, $nullable),
                 required: !$nullable,
             );
         }
@@ -183,7 +183,7 @@ class Property extends Data
             } else {
                 $properties[] = new self(
                     name: $relationName,
-                    type: Schema::fromBuiltin($relationData['models'][0], true),
+                    type: Schema::fromModel('App\\Models\\' . $relationData['models'][0], true),
                     required: false,
                 );
             }
