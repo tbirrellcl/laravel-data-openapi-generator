@@ -226,7 +226,7 @@ class Schema extends Data
         return $array;
     }
 
-    protected static function fromBuiltin(string $type_name, bool $nullable): self
+    public static function fromBuiltin(string $type_name, bool $nullable): self
     {
         // if ($type_name =='mixed') dd(debug_backtrace());
         return new self(type: $type_name, nullable: $nullable);
@@ -255,8 +255,35 @@ class Schema extends Data
     {
         $type_name = ltrim($type_name, '\\');
 
+        if (is_a($type_name, Model::class, true)) {
+            return self::fromModel($type_name, $nullable);
+        }
+
         if (! is_a($type_name, LaravelData::class, true)) {
             throw new RuntimeException("Type {$type_name} is not a Data class");
+        }
+
+        $scheme_name = last(explode('\\', $type_name));
+
+        if (! $scheme_name || ! is_string($scheme_name)) {
+            throw new RuntimeException("Cannot read basename from {$type_name}");
+        }
+
+        /** @var class-string<LaravelData> $type_name */
+        OpenApi::addClassSchema($scheme_name, $type_name);
+
+        return new self(
+            ref: '#/components/schemas/' . $scheme_name,
+            nullable: $nullable,
+        );
+    }
+
+    public static function fromModel(string $type_name, bool $nullable): self
+    {
+        $type_name = ltrim($type_name, '\\');
+
+        if (! is_a($type_name, Model::class, true)) {
+            throw new RuntimeException("Type {$type_name} is not a Model class");
         }
 
         $scheme_name = last(explode('\\', $type_name));
@@ -289,6 +316,19 @@ class Schema extends Data
         );
     }
 
+    public static function fromModelCollection(string $type_name, bool $nullable): self
+    {
+        if (! is_a($type_name, Model::class, true)) {
+            throw new RuntimeException("Type {$type_name} is not a Model class");
+        }
+
+        return new self(
+            type: 'array',
+            items: self::fromModel($type_name, false),
+            nullable: $nullable,
+        );
+    }
+
     protected static function fromListDocblock(ReflectionMethod|ReflectionFunction|ReflectionProperty $reflection, bool $nullable): self
     {
         $docs = $reflection->getDocComment();
@@ -310,6 +350,7 @@ class Schema extends Data
         }
 
         $tag_type = $tag->getType();
+
 
         if ($tag_type instanceof Compound) {
             $items = [];
@@ -333,7 +374,16 @@ class Schema extends Data
             throw new RuntimeException('Return tag of method ' . $reflection->getName() . ' is not a list');
         }
 
+
         $class = $tag_type->getValueType()->__toString();
+
+        if( is_a('App\\Models' . $class, Model::class, true)) {
+            return new self(
+                type: 'array',
+                items: self::fromModel('App\\Models' . $class, $nullable),
+                nullable: $nullable,
+            );
+        }
 
         return new self(
             type: 'array',
