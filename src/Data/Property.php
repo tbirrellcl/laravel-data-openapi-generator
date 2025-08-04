@@ -172,7 +172,11 @@ class Property extends Data
             } elseif (in_array($relationData['type'], ['morphTo'])) {
                 $properties[] = new self(
                     name: $relationName,
-                    type: Schema::fromModel('App\\Models\\' . $type, true),
+                    type: new Schema(
+                        type: 'mixed',
+                        enum: array_map(fn ($model) => '#/components/schemas/' . $model, $relationData['models']),
+                        nullable: true,
+                    ),
 
                     required: false,
                 );
