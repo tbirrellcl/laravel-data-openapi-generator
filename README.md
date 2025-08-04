@@ -12,7 +12,7 @@ In `composer.json` add this repository:
     "repositories": [
         {
             "type": "github",
-            "url": "https://github.com/xolvionl/laravel-data-openapi-generator"
+            "url": "https://github.com/MartinPham/laravel-data-openapi-generator"
         }
     ],
 ```
