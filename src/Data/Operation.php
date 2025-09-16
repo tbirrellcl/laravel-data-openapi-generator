@@ -14,7 +14,7 @@ use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Support\Transformation\TransformationContext;
 use Spatie\LaravelData\Support\Transformation\TransformationContextFactory;
 use Xolvio\OpenApiGenerator\Attributes\Tags;
-use App\OpenApi\Attributes\OpenApiIgnore;
+use Xolvio\OpenApiGenerator\Attributes\OpenApiIgnore;
 
 class Operation extends Data
 {
