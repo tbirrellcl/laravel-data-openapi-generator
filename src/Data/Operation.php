@@ -48,6 +48,11 @@ class Operation extends Data
             $controller_class = new ReflectionClass($route->getController());
             $controller_function = $controller_class->getMethod($route->getActionMethod());
 
+            if (count($controller_function->getAttributes(OpenApiIgnore::class)) > 0) {
+                echo "SKIPPED " . $controller_class->name, "::", $controller_function->name, "\n";
+                return null;
+            }
+
             echo $controller_class->name, "::", $controller_function->name, "\n";
         } elseif ($uses instanceof Closure) {
             $controller_class = null;
@@ -55,11 +60,6 @@ class Operation extends Data
         } else {
             throw new Exception('Unknown route uses');
         }
-
-        if (count($controller_function->getAttributes(OpenApiIgnore::class)) > 0) {
-            return null;
-        }
-
         $responses = Response::fromRoute($controller_function)->all();
 
         $security = SecurityScheme::fromRoute($route);
