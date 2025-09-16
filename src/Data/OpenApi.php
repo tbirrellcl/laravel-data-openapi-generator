@@ -66,7 +66,13 @@ class OpenApi extends Data
                 try {
                     self::$temp_schemas = [];
 
-                    $paths[$uri][$method] = Operation::fromRoute($route, $method);
+                    $operation = Operation::fromRoute($route, $method);
+
+                    if ($operation === null) {
+                        continue;
+                    }
+
+                    $paths[$uri][$method] = $operation;
 
                     self::addTempSchemas();
                 } catch (Throwable $th) {

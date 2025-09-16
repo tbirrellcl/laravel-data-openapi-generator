@@ -14,6 +14,7 @@ use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Support\Transformation\TransformationContext;
 use Spatie\LaravelData\Support\Transformation\TransformationContextFactory;
 use Xolvio\OpenApiGenerator\Attributes\Tags;
+use App\OpenApi\Attributes\OpenApiIgnore;
 
 class Operation extends Data
 {
@@ -31,7 +32,7 @@ class Operation extends Data
         public ?Collection $tags
     ) {}
 
-    public static function fromRoute(Route $route, string $method): self
+    public static function fromRoute(Route $route, string $method): ?self
     {
         $uses = $route->action['uses'];
         $operationId = $route->uri;
@@ -53,6 +54,10 @@ class Operation extends Data
             $controller_function = new ReflectionFunction($uses);
         } else {
             throw new Exception('Unknown route uses');
+        }
+
+        if (count($controller_function->getAttributes(OpenApiIgnore::class)) > 0) {
+            return null;
         }
 
         $responses = Response::fromRoute($controller_function)->all();
