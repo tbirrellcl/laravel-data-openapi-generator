@@ -1,6 +1,6 @@
 <?php
 
-namespace App\OpenApi\Attributes;
+namespace Xolvio\OpenApiGenerator\Attributes;
 
 use Attribute;
 
