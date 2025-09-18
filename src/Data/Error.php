@@ -52,4 +52,14 @@ class Error extends Data
 
         return HttpResponse::HTTP_INTERNAL_SERVER_ERROR;
     }
+
+    public function getStatusCode(): int
+    {
+        return $this->resolveStatusCode();
+    }
+
+    public function getContent()
+    {
+        return $this->toArray();
+    }
 }
